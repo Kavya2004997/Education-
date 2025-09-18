@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data:;">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Education Aid — Demo</title>
+  <style>
+    :root{--accent:#2563eb;--muted:#6b7280;--card:#fff;--bg:#f3f4f6;font-family:Inter,system-ui,Arial}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:#0f172a}
+    header{background:linear-gradient(90deg,#eef2ff,white);padding:18px 20px;text-align:center}
+    header h1{margin:0;font-size:20px}
+    .container{max-width:1100px;margin:18px auto;padding:16px}
+    .row{display:flex;gap:16px}
+    .card{background:var(--card);padding:16px;border-radius:10px;box-shadow:0 1px 6px rgba(2,6,23,0.06)}
+    nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .btn{padding:8px 12px;border-radius:8px;border:1px solid #e6eef6;background:white;cursor:pointer}
+    .btn.primary{background:var(--accent);color:white;border:0}
+    label{display:block;font-weight:600;margin-top:10px}
+    input[type=text],input[type=number],textarea,select,input[type=date]{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eef6;margin-top:6px}
+    textarea{min-height:80px}
+    .muted{color:var(--muted);font-size:13px}
+    .student-card{border:1px solid #eef2ff;padding:12px;border-radius:8px;margin-bottom:10px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+    .progress{height:14px;background:#e6eef6;border-radius:8px;overflow:hidden}
+    .progress-fill{height:100%;background:#16a34a}
+    .chat-window{height:220px;overflow:auto;border:1px solid #eef2ff;padding:10px;border-radius:8px;background:white}
+    .message{margin:6px 0;padding:8px;border-radius:8px;display:inline-block}
+    .message.me{background:#dcfce7}
+    .message.them{background:#eef2ff}
+    .small{font-size:13px;color:var(--muted)}
+    footer{text-align:center;color:var(--muted);margin-top:18px;padding:8px}
+    @media (max-width:900px){.row{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Education Aid — Demo</h1>
+    <div class="small">A prototype connecting students & sponsors • Demo data stored locally</div>
+  </header>
+
+  <main class="container">
+    <nav id="topNav" class="card" style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn" id="navRegister">Register Student</button>
+        <button class="btn" id="navProfile">My Profile</button>
+        <button class="btn" id="navStudents">Students List</button>
+        <button class="btn" id="navChat">Chats</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div id="currentUserDisplay" class="small muted"></div>
+        <button class="btn" id="logoutBtn">Logout</button>
+      </div>
+    </nav>
+
+    <!-- login card -->
+    <section id="loginCard" class="card" style="margin-top:12px">
+      <h3>Enter as Student or Sponsor</h3>
+      <div class="small muted">No password required for this demo — enter a display name to appear in chats and donation records.</div>
+      <label>Role
+        <select id="loginRole">
+          <option value="student">Student</option>
+          <option value="sponsor">Sponsor</option>
+        </select>
+      </label>
+      <label>Your name (displayed publicly) <input id="loginName" placeholder="e.g., Raj or Maria (Sponsor)"></label>
+      <div style="margin-top:10px"><button class="btn primary" id="doLogin">Continue</button></div>
+    </section>
+
+    <!-- main app area (hidden until login) -->
+    <section id="appArea" style="display:none;margin-top:12px">
+      <div class="row">
+        <div style="flex:1" class="card">
+          <!-- views -->
+          <div id="viewRegister" style="display:none">
+            <h3>Student Registration</h3>
+            <div class="small muted">Students add their details and upload one document (jpg/png/pdf). File max 2MB.</div>
+            <label>Full name <input id="stu_name" type="text" /></label>
+            <label>Age <input id="stu_age" type="number" min="6" max="120" /></label>
+            <label>Course / Class <input id="stu_course" type="text" /></label>
+            <label>Institution <input id="stu_institute" type="text" /></label>
+            <label>Brief requirement <textarea id="stu_need"></textarea></label>
+            <label>Requested amount (numeric) <input id="stu_amount" type="number" min="0" /></label>
+            <label>Upload supporting document <input id="stu_doc" type="file" accept="image/*,.pdf" /></label>
+            <div style="margin-top:10px;display:flex;gap:8px">
+              <button class="btn primary" id="saveStudentBtn">Save Student</button>
+              <button class="btn" id="clearStudentForm">Clear</button>
+            </div>
+          </div>
+
+          <div id="viewProfile" style="display:none">
+            <h3>My Profile</h3>
+            <div id="profileCard" class="card"></div>
+
+            <h4 style="margin-top:12px">Milestones</h4>
+            <label>Description <input id="ms_text" /></label>
+            <label>Date <input id="ms_date" type="date" /></label>
+            <div style="margin-top:8px"><button class="btn primary" id="addMilestoneBtn">Add Milestone</button></div>
+            <div id="milestoneList" style="margin-top:8px"></div>
+
+            <h4 style="margin-top:12px">Achievements</h4>
+            <label>Title <input id="ach_title" /></label>
+            <label>Description <textarea id="ach_desc"></textarea></label>
+            <div style="margin-top:8px"><button class="btn primary" id="addAchievementBtn">Add Achievement</button></div>
+            <div id="achievementList" style="margin-top:8px"></div>
+
+            <h4 style="margin-top:12px">Donation History</h4>
+            <div id="profileDonations" class="small muted"></div>
+          </div>
+
+          <div id="viewStudents" style="display:none">
+            <h3>Students Seeking Support</h3>
+            <div class="small muted">Sponsors can choose Full / Half / Custom donations. All demo donations are local to your browser.</div>
+            <div id="studentsList" style="margin-top:8px"></div>
+          </div>
+
+          <div id="viewChat" style="display:none">
+            <h3>Chat (one-to-one with a student)</h3>
+            <div class="small muted">Open chat from a student's card. Messages are stored locally.</div>
+            <div id="chatHeader" style="margin-top:8px" class="small muted"></div>
+            <div id="chatWindow" class="chat-window" style="margin-top:8px"></div>
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <input id="chatInput" placeholder="Write a message..." />
+              <button class="btn primary" id="sendChatBtn">Send</button>
+            </div>
+          </div>
+        </div>
+
+        <aside style="width:340px" class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <strong>Quick Info</strong>
+            <span class="small muted">Demo</span>
+          </div>
+
+          <div style="margin-top:12px" id="quickStats">
+            <div><strong id="studentsCount">0</strong> <span class="small muted">students</span></div>
+            <div style="margin-top:8px"><strong id="totalDonations">0</strong> <span class="small muted">total donated</span></div>
+          </div>
+
+          <hr style="margin:12px 0" />
+          <div>
+            <strong>Recent students</strong>
+            <div id="recentStudents" style="margin-top:8px" class="small muted"></div>
+          </div>
+
+          <hr style="margin:12px 0" />
+          <div>
+            <button class="btn" id="clearAllData">Clear All Demo Data</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <footer class="muted">Education Aid — prototype. Data saved locally & for demo only.</footer>
+  </main>
+
+<script>
+/* ---------------------------
+   Storage keys & helpers
+   --------------------------- */
+const STUDENTS_KEY = 'edu_aid_students_v2';
+const CHATS_KEY = 'edu_aid_chats_v2';
+const SESSION_KEY = 'edu_aid_session_v2';
+
+/* Basic session: role, name, token */
+function createSession(role, name){
+  const token = 's_' + Math.random().toString(36).slice(2,12);
+  const session = { role, name: sanitizeName(name), token, created: new Date().toISOString() };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  return session;
+}
+function getSession(){ try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch(e){ return null } }
+function clearSession(){ localStorage.removeItem(SESSION_KEY); }
+
+/* Basic student storage */
+function loadStudents(){ try { return JSON.parse(localStorage.getItem(STUDENTS_KEY) || '[]'); } catch(e){ return [] } }
+function saveStudents(list){ localStorage.setItem(STUDENTS_KEY, JSON.stringify(list)); }
+
+/* Chat storage */
+function loadChats(){ try { return JSON.parse(localStorage.getItem(CHATS_KEY) || '{}'); } catch(e){ return {} } }
+function saveChats(obj){ localStorage.setItem(CHATS_KEY, JSON.stringify(obj)); }
+
+/* Sanitize text for safe insertion */
+function escapeHtml(str){
+  if(!str && str !== 0) return '';
+  return String(str)
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#39;');
+}
+function sanitizeName(n){
+  return escapeHtml((n||'').trim().slice(0,40)) || (Math.random().toString(36).slice(2,6));
+}
+
+/* Limits for uploads (demo) */
+const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2MB
+const ALLOWED_TYPES = ['application/pdf','image/png','image/jpeg','image/jpg'];
+
+/* ---------------------------
+   UI elements
+   --------------------------- */
+const loginCard = document.getElementById('loginCard');
+const doLoginBtn = document.getElementById('doLogin');
+const appArea = document.getElementById('appArea');
+const navRegister = document.getElementById('navRegister');
+const navProfile = document.getElementById('navProfile');
+const navStudents = document.getElementById('navStudents');
+const navChat = document.getElementById('navChat');
+const logoutBtn = document.getElementById('logoutBtn');
+const currentUserDisplay = document.getElementById('currentUserDisplay');
+const clearAllDataBtn = document.getElementById('clearAllData');
+
+/* Views */
+const viewRegister = document.getElementById('viewRegister');
+const viewProfile = document.getElementById('viewProfile');
+const viewStudents = document.getElementById('viewStudents');
+const viewChat = document.getElementById('viewChat');
+
+/* Buttons */
+const saveStudentBtn = document.getElementById('saveStudentBtn');
+const addMilestoneBtn = document.getElementById('addMilestoneBtn');
+const addAchievementBtn = document.getElementById('addAchievementBtn');
+const sendChatBtn = document.getElementById('sendChatBtn');
+const clearStudentFormBtn = document.getElementById('clearStudentForm');
+
+/* Quick stats */
+const studentsCountEl = document.getElementById('studentsCount');
+const totalDonationsEl = document.getElementById('totalDonations');
+const recentStudentsEl = document.getElementById('recentStudents');
+
+/* Chat/window */
+const chatHeader = document.getElementById('chatHeader');
+const chatWindow = document.getElementById('chatWindow');
+const chatInput = document.getElementById('chatInput');
+
+let activeChatStudentId = null;
+
+/* ---------------------------
+   Login & navigation
+   --------------------------- */
+function updateNavForSession(){
+  const sess = getSession();
+  if(!sess){ loginCard.style.display = 'block'; appArea.style.display = 'none'; currentUserDisplay.innerText = ''; return; }
+  loginCard.style.display = 'none';
+  appArea.style.display = 'block';
+  currentUserDisplay.innerText = `${escapeHtml(sess.name)} (${escapeHtml(sess.role)})`;
+  // show/hide nav actions
+  if(sess.role === 'student'){
+    navRegister.style.display = 'inline-block';
+    navProfile.style.display = 'inline-block';
+    navStudents.style.display = 'none';
+  } else {
+    navRegister.style.display = 'none';
+    navProfile.style.display = 'none';
+    navStudents.style.display = 'inline-block';
+  }
+  showView(sess.role === 'student' ? 'profile' : 'students');
+}
+
+doLoginBtn.addEventListener('click', ()=>{
+  const role = document.getElementById('loginRole').value;
+  const name = document.getElementById('loginName').value || (role === 'student' ? 'Student' : 'Sponsor');
+  createSession(role, name);
+  updateNavForSession();
+  renderAll();
+});
+
+logoutBtn.addEventListener('click', ()=>{
+  if(confirm('Logout and clear session?')){ clearSession(); location.reload(); }
+});
+
+/* Navigation clicks */
+navRegister.addEventListener('click', ()=> showView('register'));
+navProfile.addEventListener('click', ()=> showView('profile'));
+navStudents.addEventListener('click', ()=> showView('students'));
+navChat.addEventListener('click', ()=> showView('chat'));
+
+/* Show single view */
+function showView(name){
+  [viewRegister, viewProfile, viewStudents, viewChat].forEach(v=>v.style.display='none');
+  if(name === 'register') viewRegister.style.display = 'block';
+  if(name === 'profile') viewProfile.style.display = 'block';
+  if(name === 'students') viewStudents.style.display = 'block';
+  if(name === 'chat') viewChat.style.display = 'block';
+}
+
+/* ---------------------------
+   Student registration & profile
+   --------------------------- */
+saveStudentBtn.addEventListener('click', async ()=>{
+  const name = document.getElementById('stu_name').value.trim();
+  if(!name){ alert('Enter student name'); return; }
+  // basic validation and sanitization
+  const age = Math.max(0, parseInt(document.getElementById('stu_age').value) || 0);
+  const course = escapeHtml(document.getElementById('stu_course').value.trim());
+  const inst = escapeHtml(document.getElementById('stu_institute').value.trim());
+  const need = escapeHtml(document.getElementById('stu_need').value.trim());
+  const amount = Math.max(0, parseFloat(document.getElementById('stu_amount').value) || 0);
+
+  // file handling (dataURL, but limit size)
+  const fileInput = document.getElementById('stu_doc');
+  let docData = null;
+  if(fileInput.files && fileInput.files[0]){
+    const f = fileInput.files[0];
+    if(!ALLOWED_TYPES.includes(f.type)){ alert('Only PDF or image files allowed'); return; }
+    if(f.size > MAX_FILE_BYTES){ alert('File too large — max 2MB'); return; }
+    docData = await readFileAsDataURL(f);
+  }
+
+  const id = 'stu_' + Date.now().toString();
+  const newStudent = {
+    id,
+    name: escapeHtml(name),
+    age,
+    course,
+    inst,
+    need,
+    amount,
+    donations: 0,
+    donationHistory: [],
+    milestones: [],
+    achievements: []
+  };
+
+  const list = loadStudents();
+  list.unshift(newStudent);
+  saveStudents(list);
+
+  // clear form
+  document.getElementById('stu_name').value = '';
+  document.getElementById('stu_age').value = '';
+  document.getElementById('stu_course').value = '';
+  document.getElementById('stu_institute').value = '';
+  document.getElementById('stu_need').value = '';
+  document.getElementById('stu_amount').value = '';
+  document.getElementById('stu_doc').value = '';
+
+  alert('Student registered locally (demo).');
+  renderAll();
+  showView('profile');
+});
+
+/* readFile helper */
+function readFileAsDataURL(file){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = () => rej();
+    r.readAsDataURL(file);
+  });
+}
+
+/* Profile rendering - picks the most recently created student for the logged-in student */
+function getCurrentStudentForProfile(){
+  const list = loadStudents();
+  return list[0] || null;
+}
+
+function renderProfile(){
+  const s = getCurrentStudentForProfile();
+  const card = document.getElementById('profileCard');
+  const milestonesEl = document.getElementById('milestoneList');
+  const achievementsEl = document.getElementById('achievementList');
+  const donationsEl = document.getElementById('profileDonations');
+
+  if(!s){
+    card.innerHTML = '<div class="muted">No student registered yet. Please add your profile.</div>';
+    milestonesEl.innerHTML = ''; achievementsEl.innerHTML = ''; donationsEl.innerHTML = '';
+    return;
+  }
+
+  const progress = s.amount ? Math.min(100, Math.round((s.donations / s.amount) * 100)) : 0;
+  card.innerHTML = `
+    <div><strong>${s.name}</strong> <span class="small muted">(${s.course} • ${s.inst})</span></div>
+    <div style="margin-top:8px">Requested amount: <strong>${s.amount}</strong></div>
+    <div style="margin-top:6px">Donations received: <strong>${s.donations}</strong></div>
+    <div class="progress" style="margin-top:8px"><div class="progress-fill" style="width:${progress}%"></div></div>
+  `;
+
+  milestonesEl.innerHTML = s.milestones.length ? s.milestones.map(m=>`<div class="muted">📌 ${escapeHtml(m.text)} — <small>${m.date}</small></div>`).join('') : '<div class="muted">No milestones yet.</div>';
+  achievementsEl.innerHTML = s.achievements.length ? s.achievements.map(a=>`<div class="muted">🏆 ${escapeHtml(a.title)} — ${escapeHtml(a.desc)}</div>`).join('') : '<div class="muted">No achievements yet.</div>';
+
+  donationsEl.innerHTML = s.donationHistory.length ? s.donationHistory.map(d=>`<div class="muted">• ${escapeHtml(d.donor)} donated ₹${d.amount} (${escapeHtml(d.type)}) on ${d.date}</div>`).join('') : '<div class="muted">No donations yet.</div>';
+}
+
+addMilestoneBtn.addEventListener('click', ()=>{
+  const s = getCurrentStudentForProfile(); if(!s){ alert('No student exists'); return; }
+  const text = document.getElementById('ms_text').value.trim(); const date = document.getElementById('ms_date').value;
+  if(!text || !date){ alert('Enter milestone and date'); return; }
+  s.milestones.unshift({ text: escapeHtml(text), date });
+  replaceStudent(s);
+  document.getElementById('ms_text').value=''; document.getElementById('ms_date').value='';
+  renderProfile();
+});
+
+addAchievementBtn.addEventListener('click', ()=>{
+  const s = getCurrentStudentForProfile(); if(!s){ alert('No student exists'); return; }
+  const title = document.getElementById('ach_title').value.trim(); const desc = document.getElementById('ach_desc').value.trim();
+  if(!title){ alert('Enter achievement title'); return; }
+  s.achievements.unshift({ title: escapeHtml(title), desc: escapeHtml(desc) });
+  replaceStudent(s);
+  document.getElementById('ach_title').value=''; document.getElementById('ach_desc').value='';
+  renderProfile();
+});
+
+function replaceStudent(updated){
+  const list = loadStudents();
+  const idx = list.findIndex(x=>x.id === updated.id);
+  if(idx >= 0) list[idx] = updated;
+  saveStudents(list);
+  renderAll();
+}
+
+/* ---------------------------
+   Students list + donation
+   --------------------------- */
+
+function renderStudentsList(){
+  const list = loadStudents();
+  const el = document.getElementById('studentsList');
+  if(!list.length){ el.innerHTML = '<div class="muted">No students registered yet.</div>'; return; }
+
+  el.innerHTML = list.map(s => {
+    const remaining = Math.max(0, (s.amount || 0) - (s.donations || 0));
+    const progress = s.amount ? Math.min(100, Math.round((s.donations / s.amount) * 100)) : 0;
+    return `
+      <div class="student-card" id="card_${s.id}">
+        <div style="flex:1">
+          <div style="font-weight:700">${escapeHtml(s.name)}</div>
+          <div class="small muted">${escapeHtml(s.course)} • ${escapeHtml(s.inst)}</div>
+          <div style="margin-top:6px">Need: ${escapeHtml(s.need)}</div>
+          <div style="margin-top:6px">Requested: <strong>${s.amount}</strong> • Received: <strong>${s.donations}</strong> • Remaining: <strong>${remaining}</strong></div>
+          <div class="progress" style="margin-top:6px"><div class="progress-fill" style="width:${progress}%"></div></div>
+        </div>
+        <div style="min-width:180px;display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+          ${getSession().role === 'sponsor' ? `
+            <button class="btn primary" onclick="donate('${s.id}','full')">Full Donate</button>
+            <button class="btn" onclick="donate('${s.id}','half')">Half Donate</button>
+            <button class="btn" onclick="donate('${s.id}','custom')">Custom</button>
+            <button class="btn" onclick="openStudentDetail('${s.id}')">Details</button>
+            <button class="btn" onclick="openChatWith('${s.id}')">Chat</button>
+          ` : `
+            <button class="btn" onclick="openStudentDetail('${s.id}')">Details</button>
+          `}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* donation function - full/half/custom; stores donor info using session name */
+function donate(studentId, type){
+  const students = loadStudents();
+  const s = students.find(x=>x.id===studentId); if(!s){ alert('Student not found'); return; }
+  const sess = getSession();
+  if(!sess){ alert('Please login'); return; }
+
+  let amount = 0;
+  if(type === 'full'){
+    amount = Math.max(0, (s.amount || 0) - (s.donations || 0));
+    if(amount === 0){ alert('Student already fully funded'); return; }
+  } else if(type === 'half'){
+    amount = Math.ceil((s.amount || 0) / 2);
+  } else {
+    const input = prompt('Enter donation amount (numbers only):');
+    amount = input ? parseInt(input.replace(/[^\d]/g,'')) || 0 : 0;
+  }
+
+  if(amount <= 0){ alert('Invalid donation amount'); return; }
+
+  // security: confirmation
+  if(!confirm(`Confirm donation of ₹${amount} to ${s.name}?`)) return;
+
+  s.donations = (s.donations || 0) + amount;
+  s.donationHistory = s.donationHistory || [];
+  s.donationHistory.unshift({ donor: sanitizeName(sess.name), amount, date: new Date().toLocaleString(), type });
+  replaceStudent(s);
+
+  // update global stats
+  renderAll();
+  // auto-open details so sponsor can see history
+  openStudentDetail(studentId);
+}
+
+/* Student detail (modal-less): shows details + donation history */
+function openStudentDetail(id){
+  const s = loadStudents().find(x=>x.id===id);
+  if(!s) return alert('Not found');
+  // simple prompt-style detail (keeps UI simple)
+  const lines = [
+    `Name: ${s.name}`,
+    `Course: ${s.course}`,
+    `Institution: ${s.inst}`,
+    `Needed: ${s.amount}`,
+    `Received: ${s.donations}`,
+    `Remaining: ${Math.max(0,(s.amount||0)- (s.donations||0))}`,
+    `--- Donation History ---`
+  ];
+  if((s.donationHistory || []).length){
+    s.donationHistory.forEach(d => lines.push(`${d.date} — ${d.donor} — ₹${d.amount} (${d.type})`));
+  } else lines.push('No donations yet');
+  // also ask to open document if exists (not stored in this demo to reduce localStorage usage)
+  alert(lines.join('\n'));
+}
+
+/* ---------------------------
+   Chat (one-on-one per student)
+   --------------------------- */
+function openChatWith(studentId){
+  const s = loadStudents().find(x=>x.id===studentId);
+  if(!s) return alert('Student not found');
+  activeChatStudentId = studentId;
+  showView('chat');
+  chatHeader.innerHTML = `<strong>Chat with ${escapeHtml(s.name)}</strong>`;
+  renderChat();
+}
+
+function renderChat(){
+  const chatObj = loadChats();
+  const msgs = chatObj[activeChatStudentId] || [];
+  chatWindow.innerHTML = msgs.map(m => `<div class="message ${m.fromToken === getSession().token ? 'me' : 'them'}"><strong>${escapeHtml(m.from)}:</strong> ${escapeHtml(m.text)}<div class="small muted">${escapeHtml(m.date)}</div></div>`).join('');
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+sendChatBtn.addEventListener('click', ()=>{
+  const text = chatInput.value.trim(); if(!text){ return; }
+  if(!activeChatStudentId) { alert('Open a chat from a student card'); return; }
+  const sess = getSession(); if(!sess) return alert('Please login');
+  const chats = loadChats();
+  if(!chats[activeChatStudentId]) chats[activeChatStudentId]=[];
+  chats[activeChatStudentId].push({ from: sess.name, fromToken: sess.token, text: escapeHtml(text), date: new Date().toLocaleString() });
+  saveChats(chats);
+  chatInput.value='';
+  renderChat();
+});
+
+/* ---------------------------
+   Utilities & UI glue
+   --------------------------- */
+function renderQuickStats(){
+  const list = loadStudents();
+  studentsCountEl.innerText = list.length;
+  const totalDon = list.reduce((acc,s)=>acc + (s.donations || 0), 0);
+  totalDonationsEl.innerText = totalDon;
+  recentStudentsEl.innerHTML = list.slice(0,5).map(s=>`<div>${escapeHtml(s.name)} — ${escapeHtml(s.course)}</div>`).join('') || '<div class="muted">No students</div>';
+}
+
+function renderAll(){
+  const sess = getSession();
+  if(!sess) return;
+  renderQuickStats();
+  if(sess.role === 'student') renderProfile();
+  renderStudentsList();
+}
+
+/* Clear all demo data (careful) */
+clearAllDataBtn.addEventListener('click', ()=>{
+  if(confirm('Clear all demo data (students, chats)? This cannot be undone in demo.') ){
+    localStorage.removeItem(STUDENTS_KEY); localStorage.removeItem(CHATS_KEY);
+    renderAll();
+    alert('Cleared demo data');
+  }
+});
+
+/* Clear student registration form */
+clearStudentFormBtn.addEventListener('click', ()=>{
+  if(confirm('Clear form?')) {
+    document.getElementById('stu_name').value=''; document.getElementById('stu_age').value='';
+    document.getElementById('stu_course').value=''; document.getElementById('stu_institute').value='';
+    document.getElementById('stu_need').value=''; document.getElementById('stu_amount').value=''; document.getElementById('stu_doc').value='';
+  }
+});
+
+/* Init on page load */
+(function init(){
+  updateNavForSession();
+  renderAll();
+})();
+</script>
+</body>
+</html>
